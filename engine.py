@@ -26,7 +26,9 @@ MIRRORS = { "/":  lambda x,y: (-y, -x),
 
 
 class Interpreter(object):
-    def __init__(self, fileName):
+    def __init__(self, fileName, debug):
+        self._debug = debug
+
         # IP variables
         self._x = -1 # Location in code
         self._y = 0
@@ -43,6 +45,7 @@ class Interpreter(object):
         self._currentStack = []
         self._savedStacks = [] # For when we want to create multiple of them
         self._register = [None] # Array for multiple stacks
+        self._output = []
 
 
     def _getCode(self, fileName):
@@ -93,159 +96,171 @@ class Interpreter(object):
             self._move()
 
     def _interpret(self, currInst):
-        # Movement
-        if currInst in ARROWS:
-            # Normal arrows
-            self._direction = ARROWS[currInst]
+        if self._strMode and currInst != "\"":
+            self._push(ord(currInst))
+        else:
+            # Movement
+            if currInst in ARROWS:
+                # Normal arrows
+                self._direction = ARROWS[currInst]
 
-        elif currInst in MIRRORS:
-            # Mirrors
-            self._direction = MIRRORS[currInst](self._x, self._y)
+            elif currInst in MIRRORS:
+                # Mirrors
+                self._direction = MIRRORS[currInst](self._direction[0], self._direction[1])
 
-        elif currInst == "?":
-            # Random Direction
-            self._direction = ARROWS[random.choice(list(ARROWS))]
+            elif currInst == "?":
+                # Random Direction
+                self._direction = ARROWS[random.choice(list(ARROWS))]
 
-        elif currInst == "#":
-            # Trampoline
-            self._skip = True
+            elif currInst == "#":
+                # Trampoline
+                self._skip = True
 
-        elif currInst == "j":
-            # Jump to a point
-            self._y, self._x = self._pop(), self._pop()
-        
-        # Operators - Normal
-        elif currInst in NUMS:
-            # Push constants
-            self._push(int(currInst, len(NUMS)))
+            elif currInst == "j":
+                # Jump to a point
+                self._y, self._x = self._pop(), self._pop()
+            
+            # Operators - Normal
+            elif currInst in NUMS:
+                # Push constants
+                self._push(int(currInst, len(NUMS)))
 
-        elif currInst in MATH_OP:
-            # Perform Math (+, -, *, /, %)
-            y, x = self._pop(), self._pop()
-            self._push(eval("{} {} {}".format(str(x), MATH_OP[currInst], str(y))))
+            elif currInst in MATH_OP:
+                # Perform Math (+, -, *, /, %)
+                y, x = self._pop(), self._pop()
+                self._push(eval("{} {} {}".format(str(x), MATH_OP[currInst], str(y))))
 
-        elif currInst == "&":
-            # Put something in the current register...
-            currentReg = self._register.pop()
-            if currentReg == None:
-                self._register.append(self._pop())
-            else:
-            # ...or take something out.
-                self._push(currentReg)
+            elif currInst == "&":
+                # Put something in the current register...
+                currentReg = self._register.pop()
+                if currentReg == None:
+                    self._register.append(self._pop())
+                else:
+                # ...or take something out.
+                    self._push(currentReg)
+                    self._register.append(None)
+
+            # If statments
+            elif currInst == "`":
+                # Skippy
+                self._skip = True if self._pop() == 0 else False
+
+            elif currInst == "I":
+                # Vertial
+                self._direction = ARROWS["v"] if self._pop() == 0 else ARROWS["^"]
+
+            elif currInst == "i":
+                # Horizontal
+                self._direction = ARROWS[">"] if self._pop() == 0 else ARROWS["<"]
+
+
+            # Stack Operators
+            elif currInst == "r":
+                # Reverse the stack
+                self._currentStack = self._currentStack[::-1]
+
+            elif currInst == "[":
+                # Create a new stack and register
+                x = self._pop()
+                self._savedStacks.append(self._currentStack[:len(self._currentStack) - x])
+                self._currentStack = self._currentStack[x - 1:]
                 self._register.append(None)
 
-        # If statments
-        elif currInst == "`":
-            # Skippy
-            self._skip = True if self._pop() == 0 else False
+            elif currInst == "]":
+                # Takes the current stack and adds it to the one below
+                # Also, it gets rid of the register.
+                self._register.pop()
+                self._currentStack = self._savedStacks.pop() + self._currentStack
 
-        elif currInst == "I":
-            # Vertial
-            self._direction = ARROWS["v"] if self._pop() == 0 else ARROWS["^"]
+            elif currInst == "{":
+                # Shift the stack left
+                self._currentStack.insert(len(self._currentStack) - 1, self._currentStack.pop(0))
 
-        elif currInst == "i":
-            # Horizontal
-            self._direction = ARROWS[">"] if self._pop() == 0 else ARROWS["<"]
+            elif currInst == "}":
+                # Shift the stack right
+                self._currentStack.insert(0, self._currentStack.pop())
 
+            elif currInst == "~":
+                # Discard the top value
+                self._pop()
 
-        # Stack Operators
-        elif currInst == "r":
-            # Reverse the stack
-            self._currentStack = self._currentStack[::-1]
+            elif currInst == ":":
+                # Duplicate the top of the stack, put 0 if there is nothing
+                if len(self._currentStack) == 0:
+                    self._currentStack.append(0)
+                else:
+                    self._currentStack.append(self._currentStack[len(self._currentStack) - 1])
 
-        elif currInst == "[":
-            # Create a new stack and register
-            x = self._pop()
-            self._savedStacks.append(self._currentStack[:len(self._currentStack) - x])
-            self._currentStack = self._currentStack[x - 1:]
-            self._register.append(None)
+            elif currInst == "s":
+                # Swap the last two elements pushed onto the stack
+                x, y = self._pop(), self._pop()
+                self._push(x)
+                self._push(y)
 
-        elif currInst == "]":
-            # Takes the current stack and adds it to the one below
-            # Also, it gets rid of the register.
-            self._register.pop()
-            self._currentStack = self._savedStacks.pop() + self._currentStack
+            elif currInst == "l":
+                self._push(len(self._currentStack))
 
-        elif currInst == "{":
-            # Shift the stack left
-            self._currentStack.insert(len(self._currentStack) - 1, self._currentStack.pop(0))
+            # Operators - Comparison
+            elif currInst in COMP_OP:
+                y, x = self._pop(), self._pop()
+                if eval("{} {} {}".format(x, COMP_OP[currInst], y)):
+                    self._push(1)
+                else:
+                    self._push(0)
 
-        elif currInst == "}":
-            # Shift the stack right
-            self._currentStack.insert(0, self._currentStack.pop())
+            elif currInst == "!":
+                if self._pop() == 0:
+                    self._push(1)
+                else:
+                    self._push(0)
 
-        elif currInst == "~":
-            # Discard the top value
-            self._pop()
+            elif currInst == "\"":
+                # Toggle String mode
+                self._strMode = not self._strMode
 
-        elif currInst == ":":
-            # Duplicate the top of the stack, put 0 if there is nothing
-            if len(self._currentStack) == 0:
-                self._currentStack.append(0)
+            elif currInst == "o":
+                # Output as an ASCII character
+                if self._debug:
+                    self._output.append(chr(self._pop()))
+                else:
+                    print(chr(self._pop()), end="")
+
+            elif currInst == "n":
+                # Output as a decimal number
+                if self._debug:
+                    self._output.append(self._pop())
+                else:
+                    print(self._pop(), end="")
+
+            elif currInst == "h":
+                # Output as a hex number
+                if self._debug:
+                    self._output.append(hex(self._pop()))
+                else:
+                    print(hex(self._pop()), end="")
+            
+            elif currInst == "p":
+                # Put z at (x, y)
+                y, x, z = self._pop(), self._pop(), self._pop()
+                self._code[y][x] = z
+
+            elif currInst == "g":
+                # Get a value from the code
+                y, x = self._pop(), self._pop()
+                self._push(self._code[y][x])
+
+            elif currInst == " ":
+                # Nop
+                pass
+
+            elif currInst == ";":
+                # End execution
+                self._running = False
+
             else:
-                self._currentStack.append(self._currentStack[len(self._currentStack) - 1])
+                self._running = False
+                print("Eh?! I don't know what is this: " + currInst)
 
-        elif currInst == "s":
-            # Swap the last two elements pushed onto the stack
-            x, y = self._pop(), self._pop()
-            self._push(x)
-            self._push(y)
-
-        elif currInst == "l":
-            self._push(len(self._currentStack))
-
-        # Operators - Comparison
-        elif currInst in COMP_OP:
-            y, x = self._pop(), self._pop()
-            if eval("{} {} {}".format(x, COMP_OP[currInst], y)):
-                self._push(1)
-            else:
-                self._push(0)
-
-        elif currInst == "!":
-            if self._pop() == 0:
-                self._push(1)
-            else:
-                self._push(0)
-
-        elif currInst == "\"":
-            self._strMode = not self._strMode
-
-        elif currInst == "o":
-            # Output as an ASCII character (TODO)
-            pass
-
-        elif currInst == "n":
-            # Output as a decimal number (TODO)
-            pass
-
-        elif currInst == "h":
-            # Output as a hex number (TODO)
-            pass
-        
-        elif currInst == "p":
-            # Put z at (x, y)
-            y, x, z = self._pop(), self._pop(), self._pop()
-            self._code[y][x] = z
-
-        elif currInst == "g":
-            # Get a value from the code
-            y, x = self._pop(), self._pop()
-            self._push(self._code[y][x])
-
-        elif currInst == " ":
-            # Nop
-            pass
-
-        elif currInst == ";":
-            # End execution
-            self._running = False
-
-        else:
-            self._running = False
-            print("Eh?! I don't know what is this: " + currInst)
-
-        print("currInst: ", currInst,", Register:  ", self._register, ", stack: ", self._currentStack)
 
     def _run(self):
         # Initalize
@@ -255,12 +270,15 @@ class Interpreter(object):
         self._running = True
 
         while self._running:
-            currentInst = " "
-            while currentInst == " ": # Skip over spaces
-                self._move()
+            if not self._strMode: 
+                currentInst = " "
+                while currentInst == " ":  # Skip spaces when taking in commands
+                    self._move()
+                    currentInst = chr(self._code[self._y][self._x])
+            else:
+                self._move() # Allow spaces to be pushed to the stack
                 currentInst = chr(self._code[self._y][self._x])
+
+
             self._interpret(currentInst)
-            
-        
-
-
+        print("\n\nEnd of execution\n\n")
