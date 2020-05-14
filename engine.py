@@ -1,4 +1,5 @@
 import random
+
 NUMS = "0123456789abcdef"
 
 MATH_OP = {"+":"+",
@@ -125,11 +126,12 @@ class Interpreter(object):
 
         elif currInst == "&":
             # Put something in the current register...
-            if self._register.pop() == None:
+            currentReg = self._register.pop()
+            if currentReg == None:
                 self._register.append(self._pop())
             else:
             # ...or take something out.
-                self._push(self._register.pop())
+                self._push(currentReg)
                 self._register.append(None)
 
         # If statments
@@ -142,12 +144,11 @@ class Interpreter(object):
             self._direction = ARROWS["v"] if self._pop() == 0 else ARROWS["^"]
 
         elif currInst == "i":
-            # horizontal
+            # Horizontal
             self._direction = ARROWS[">"] if self._pop() == 0 else ARROWS["<"]
 
 
-        # Stack Operators ========================================================================================= Start here
-
+        # Stack Operators
         elif currInst == "r":
             # Reverse the stack
             self._currentStack = self._currentStack[::-1]
@@ -170,28 +171,36 @@ class Interpreter(object):
             self._currentStack.insert(len(self._currentStack) - 1, self._currentStack.pop(0))
 
         elif currInst == "}":
+            # Shift the stack right
             self._currentStack.insert(0, self._currentStack.pop())
 
         elif currInst == "~":
+            # Discard the top value
             self._pop()
 
         elif currInst == ":":
+            # Duplicate the top of the stack, put 0 if there is nothing
             if len(self._currentStack) == 0:
                 self._currentStack.append(0)
             else:
                 self._currentStack.append(self._currentStack[len(self._currentStack) - 1])
 
         elif currInst == "s":
+            # Swap the last two elements pushed onto the stack
             x, y = self._pop(), self._pop()
-            self._push(y)
             self._push(x)
+            self._push(y)
 
         elif currInst == "l":
             self._push(len(self._currentStack))
 
         # Operators - Comparison
         elif currInst in COMP_OP:
-            pass
+            y, x = self._pop(), self._pop()
+            if eval("{} {} {}".format(x, COMP_OP[currInst], y)):
+                self._push(1)
+            else:
+                self._push(0)
 
         elif currInst == "!":
             if self._pop() == 0:
@@ -203,18 +212,24 @@ class Interpreter(object):
             self._strMode = not self._strMode
 
         elif currInst == "o":
+            # Output as an ASCII character (TODO)
             pass
 
         elif currInst == "n":
+            # Output as a decimal number (TODO)
             pass
 
         elif currInst == "h":
+            # Output as a hex number (TODO)
             pass
         
         elif currInst == "p":
+            # Put z at (x, y)
             y, x, z = self._pop(), self._pop(), self._pop()
             self._code[y][x] = z
+
         elif currInst == "g":
+            # Get a value from the code
             y, x = self._pop(), self._pop()
             self._push(self._code[y][x])
 
@@ -223,23 +238,27 @@ class Interpreter(object):
             pass
 
         elif currInst == ";":
+            # End execution
             self._running = False
 
         else:
             self._running = False
             print("Eh?! I don't know what is this: " + currInst)
 
-        print("currInst: ", currInst, "stack: ", self._currentStack)
+        print("currInst: ", currInst,", Register:  ", self._register, ", stack: ", self._currentStack)
 
     def _run(self):
+        # Initalize
         self._currentStack = []
         self._savedStacks = []
         self._register = [None]
         self._running = True
 
         while self._running:
-            self._move()
-            currentInst = chr(self._code[self._y][self._x])
+            currentInst = " "
+            while currentInst == " ": # Skip over spaces
+                self._move()
+                currentInst = chr(self._code[self._y][self._x])
             self._interpret(currentInst)
             
         

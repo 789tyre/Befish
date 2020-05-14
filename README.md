@@ -84,5 +84,5 @@ h  Pop one value then output it as a hex number
 p  Pop y then x then z. It stores z at (x, y)
 
 g  Pop y then x. It pushes the value stored at (x, y). If there
-   is nothing there it pushes 10
+   is nothing there it pushes 0
 
