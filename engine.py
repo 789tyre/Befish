@@ -33,8 +33,8 @@ MIRRORS = {
 class Interpreter(object):
     def __init__(self, fileName):
         # IP variables
-        self._x = -1 # Location in code
-        self._y = 0
+        self._IPx = -1 # Location in code
+        self._IPy = 0
         self._direction = ARROWS[">"] 
         self._skip = False # Should the IP skip the next instruction?
 
@@ -97,15 +97,15 @@ class Interpreter(object):
 
     def _move(self):
         # Move the IP
-        self._x += self._direction[0]
-        self._y += self._direction[1]
+        self._IPx += self._direction[0]
+        self._IPy += self._direction[1]
 
         # Wrap around
-        if self._x >= self._width: self._x = 0
-        if self._x < 0: self._x = self._width - 1
+        if self._IPx >= self._width: self._IPx = 0
+        if self._IPx < 0: self._IPx = self._width - 1
 
-        if self._y >= self._height: self._y = 0
-        if self._y < 0: self._y = self._height - 1
+        if self._IPy >= self._height: self._IPy = 0
+        if self._IPy < 0: self._IPy = self._height - 1
 
         if self._skip:
             self._skip = False
@@ -134,7 +134,7 @@ class Interpreter(object):
 
             elif currInst == "j":
                 # Jump to a point
-                self._y, self._x = self._pop(), self._pop()
+                self._IPy, self._IPx = self._pop(), self._pop()
             
             # Operators - Normal
             elif currInst in NUMS:
@@ -310,10 +310,10 @@ class Interpreter(object):
                 currentInst = " "
                 while currentInst == " ":  # Skip spaces when taking in commands
                     self._move()
-                    currentInst = chr(self._code[self._y][self._x])
+                    currentInst = chr(self._code[self._IPy][self._IPx])
             else:
                 self._move() # Allow spaces to be pushed to the stack
-                currentInst = chr(self._code[self._y][self._x])
+                currentInst = chr(self._code[self._IPy][self._IPx])
 
 
             self._interpret(currentInst)
