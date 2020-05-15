@@ -81,6 +81,8 @@ n  Pop one value then output it as a number
 
 h  Pop one value then output it as a hex number
 
+.  Ask the user for input.
+
 p  Pop y then x then z. It stores z at (x, y)
 
 g  Pop y then x. It pushes the value stored at (x, y). If there

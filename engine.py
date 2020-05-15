@@ -1,23 +1,28 @@
 import random
+from time import sleep
 
 NUMS = "0123456789abcdef"
 
-MATH_OP = {"+":"+",
+MATH_OP = {
+           "+":"+",
            "-":"-",
            "*":"*",
            ",":"/",
            "%":"%"
           }
 
-COMP_OP = { "(":"<",
+COMP_OP = { 
+            "(":"<",
             ")":">",
             "=":"=="
           }
 
-ARROWS = {"<":(-1, 0), "^":(0,-1),
+ARROWS = {
+          "<":(-1, 0), "^":(0,-1),
           ">":( 1, 0), "v":(0, 1)
          }
-MIRRORS = { "/":  lambda x,y: (-y, -x),
+MIRRORS = { 
+            "/":  lambda x,y: (-y, -x),
             "\\": lambda x,y: (y, x),
             "|":  lambda x,y: (-x, y),
             "_":  lambda x,y: (x, -y),
@@ -26,9 +31,7 @@ MIRRORS = { "/":  lambda x,y: (-y, -x),
 
 
 class Interpreter(object):
-    def __init__(self, fileName, debug):
-        self._debug = debug
-
+    def __init__(self, fileName):
         # IP variables
         self._x = -1 # Location in code
         self._y = 0
@@ -40,20 +43,19 @@ class Interpreter(object):
         self._width = 0  # Used for wrapping
         self._height = 0
         self._strMode = False
-        self._code = self._getCode(fileName) 
+        self._code = self._getCode() 
         self._running = False
         self._currentStack = []
         self._savedStacks = [] # For when we want to create multiple of them
         self._register = [None] # Array for multiple stacks
-        self._output = []
 
 
-    def _getCode(self, fileName):
+    def _getCode(self):
         code = []
         self._height = 0
         self._width = 0
 
-        with open(fileName, "r") as f:
+        with open(self._fileName, "r") as f:
             # Getting all of the code (Pass 1)
             for line in f: # go through all lines
                 temp = []
@@ -78,6 +80,20 @@ class Interpreter(object):
 
     def _push(self, item):
         self._currentStack.append(item)
+
+    def _input(self):
+        temp = input("Enter input: ") 
+        for char in temp[::-1]:
+            self._push(ord(char))
+
+    def _charOutput(self):
+        print(chr(self._pop()), end="")
+
+    def _numOutput(self):
+        print(self._pop(), end="")
+
+    def _hexOutput(self):
+        print(hex(self._pop()), end="")
 
     def _move(self):
         # Move the IP
@@ -220,24 +236,43 @@ class Interpreter(object):
 
             elif currInst == "o":
                 # Output as an ASCII character
-                if self._debug:
-                    self._output.append(chr(self._pop()))
-                else:
-                    print(chr(self._pop()), end="")
+                self._charOutput()
 
             elif currInst == "n":
                 # Output as a decimal number
-                if self._debug:
-                    self._output.append(self._pop())
-                else:
-                    print(self._pop(), end="")
+                self._numOutput()
 
             elif currInst == "h":
                 # Output as a hex number
-                if self._debug:
-                    self._output.append(hex(self._pop()))
-                else:
-                    print(hex(self._pop()), end="")
+                self._hexOutput()
+
+            elif currInst == "O":
+                # Convert a number to ASCII. If it fails, push -1
+                toConvert = str(self._pop())
+                try:
+                    for i in toConvert[::-1]:
+                        self._push(ord(i))
+                except:
+                    self._push(-1)
+
+            elif currInst == "N":
+                # Convert from ASCII to Decimal. If it fails, push -1
+                try:
+                    # Convert from an ASCII number to a character and then to a decimal number
+                    self._push(int(chr(self._pop())))
+                except:
+                    self._push(-1)
+
+            elif currInst == "H":
+                # Convert from ASCII to Hex. If it fails, push -1
+                try:
+                    # Convert from an ASCII number to a character and then to decimal number and then finally to a hex number
+                    self._push(int(chr(self._pop()), 16))
+                except:
+                    self._push(-1)
+
+            elif currInst == ".":
+                self._input()
             
             elif currInst == "p":
                 # Put z at (x, y)
@@ -262,7 +297,8 @@ class Interpreter(object):
                 print("Eh?! I don't know what is this: " + currInst)
 
 
-    def _run(self):
+
+    def run(self):
         # Initalize
         self._currentStack = []
         self._savedStacks = []
@@ -281,4 +317,5 @@ class Interpreter(object):
 
 
             self._interpret(currentInst)
+            # print("currInst: " + str(currentInst) + ", Reg: " + str(self._register) + ", Stack: " + str(self._currentStack))
         print("\n\nEnd of execution\n\n")
