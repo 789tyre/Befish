@@ -85,8 +85,8 @@ Output: {}
 
         self._deinit()
 
-    def run(self):
-        wrapper(self._wrappedRun())
+    def run(self, stdscr):
+        self._wrappedRun()
 
     def _deinit(self):
         self._stdscr.getkey()
