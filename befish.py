@@ -17,7 +17,8 @@ if __name__ == "__main__":
 
     if args.debug:
         code = debugInterpreter(args.file, args.time)
+        wrapper(code.run)
     else:
         code = Interpreter(args.file)
+        code.run()
 
-    wrapper(code.run)
