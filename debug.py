@@ -2,7 +2,7 @@ import curses
 from curses import wrapper
 from engine import *
 
-class debugInterpreter(Interpreter): # (TODO)
+class debugInterpreter(Interpreter):
     def __init__(self, fileName, waitTime=0.25):
         super().__init__(fileName)
         self._output = []
@@ -11,8 +11,19 @@ class debugInterpreter(Interpreter): # (TODO)
         self._dimentions = None
         self._cursorLocation = [0, 0]
 
+        self._Vpadding = 5
+        self._Hpadding = 0
+
     def _input(self):
-        pass
+        self._cursorLocation = [self._height + self._Vpadding, 0] # Info starts one line down
+        curses.echo()
+        self._stdscr.addstr(*self._cursorLocation, "Enter input: ")
+        temp = self._stdscr.getstr()
+        for char in temp[::-1]:
+            self._push(char)
+
+        curses.noecho()
+       
 
     def _charOutput(self):
         self._output.append(chr(self._pop()))
@@ -38,7 +49,6 @@ class debugInterpreter(Interpreter): # (TODO)
         self._dimentions = self._stdscr.getmaxyx()
 
     def _wrappedRun(self):
-        self._init()
         while self._running:
             # Step through the code
             self._move()
@@ -62,9 +72,9 @@ class debugInterpreter(Interpreter): # (TODO)
                 self._cursorLocation[1] = 0
 
             # Draw info
-            self._cursorLocation[0] += 3
+            self._cursorLocation[0] += self._Vpadding
             self._stdscr.addstr("""
-\n\nInstruction: {}
+Instruction: {}
 Stack: {}
 Register: {}
 Output: {}
@@ -83,10 +93,11 @@ Output: {}
             sleep(self._waitTime)
 
 
-        self._deinit()
 
     def run(self, stdscr):
+        self._init()
         self._wrappedRun()
+        self._deinit()
 
     def _deinit(self):
         self._stdscr.getkey()

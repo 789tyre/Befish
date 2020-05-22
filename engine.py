@@ -29,6 +29,10 @@ MIRRORS = {
             "R":  lambda x,y: (-x, -y)
           }
 
+class StopExecution(Exception):
+    def __init__(self, message):
+        return message
+
 
 class Interpreter(object):
     def __init__(self, fileName):
@@ -59,13 +63,14 @@ class Interpreter(object):
             # Getting all of the code (Pass 1)
             for line in f: # go through all lines
                 temp = []
-                self._height += 1
-                self._width = len(line) if self._width < len(line) else self._width
 
                 if line.strip() == "//": break # After "//" all is comments
+                if line.strip() == "": continue
 
-                for char in range(len(line) - 1): # go through all the characters in the line
+                for char in range(len(line) - 1): 
                     temp.append(ord(line[char]))
+                self._height += 1
+                self._width = len(line) if self._width < len(line) else self._width
                 code.append(temp)
 
         # Make sure that that all lines are the same width (Pass 2)
@@ -291,10 +296,11 @@ class Interpreter(object):
             elif currInst == ";":
                 # End execution
                 self._running = False
+                raise StopExecution("End of execution.")
 
             else:
                 self._running = False
-                print("Eh?! I don't know what is this: " + currInst)
+                raise StopExecution("I don't know what this is: " + currInst)
 
 
 
@@ -318,4 +324,3 @@ class Interpreter(object):
 
             self._interpret(currentInst)
             # print("currInst: " + str(currentInst) + ", Reg: " + str(self._register) + ", Stack: " + str(self._currentStack))
-        print("\n\nEnd of execution\n\n")
