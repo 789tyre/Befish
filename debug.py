@@ -8,21 +8,22 @@ class debugInterpreter(Interpreter):
         self._output = []
         self._stdscr = None
         self._waitTime = waitTime
-        self._dimentions = None
+        self._stdscrDimentions = None
         self._cursorLocation = [0, 0]
 
-        self._Vpadding = 5
-        self._Hpadding = 0
+        self._Vpadding = 3
 
     def _input(self):
         self._cursorLocation = [self._height + self._Vpadding, 0] # Info starts one line down
         curses.echo()
+        curses.curs_set(True)
         self._stdscr.addstr(*self._cursorLocation, "Enter input: ")
         temp = self._stdscr.getstr()
         for char in temp[::-1]:
             self._push(char)
 
         curses.noecho()
+        curses.curs_set(False)
        
 
     def _charOutput(self):
@@ -46,7 +47,7 @@ class debugInterpreter(Interpreter):
         curses.noecho()
         curses.curs_set(False)
         self._stdscr.keypad(True)
-        self._dimentions = self._stdscr.getmaxyx()
+        self._stdscrDimentions = self._stdscr.getmaxyx()
 
     def _wrappedRun(self):
         while self._running:
@@ -73,12 +74,11 @@ class debugInterpreter(Interpreter):
 
             # Draw info
             self._cursorLocation[0] += self._Vpadding
-            self._stdscr.addstr("""
+            self._stdscr.addstr(*self._cursorLocation, """
 Instruction: {}
 Stack: {}
 Register: {}
-Output: {}
-            """.format(
+Output: {}""".format(
                     currentInst,
                     str(self._currentStack),
                     str(self._register),
@@ -87,7 +87,7 @@ Output: {}
 
             self._stdscr.refresh()
 
-            # Check input
+            # Check input (TODO)
 
             # Wait
             sleep(self._waitTime)
@@ -95,8 +95,13 @@ Output: {}
 
 
     def run(self, stdscr):
+        # TODO: Maybe remove the wrapper in befish.py 
+        #       and handle errors here instead
+        #       There's already a _deinit function
         self._init()
         self._wrappedRun()
+        self._cursorLocation[1] = 0
+        self._stdscr.addstr(*self._cursorLocation, "End of Execution.")
         self._deinit()
 
     def _deinit(self):

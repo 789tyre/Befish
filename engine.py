@@ -29,10 +29,6 @@ MIRRORS = {
             "R":  lambda x,y: (-x, -y)
           }
 
-class StopExecution(Exception):
-    def __init__(self, message):
-        return message
-
 
 class Interpreter(object):
     def __init__(self, fileName):
@@ -296,11 +292,11 @@ class Interpreter(object):
             elif currInst == ";":
                 # End execution
                 self._running = False
-                raise StopExecution("End of execution.")
+                print("End of execution.")
 
             else:
                 self._running = False
-                raise StopExecution("I don't know what this is: " + currInst)
+                print("I don't know what this is: " + currInst)
 
 
 
